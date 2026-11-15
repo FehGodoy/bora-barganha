@@ -163,12 +163,12 @@ def run_cycle(send: bool, skip_collect: bool) -> int:
             if last and now() - datetime.fromisoformat(last[0]) < COLLECT_EVERY:
                 skip_collect = True
             if not skip_collect:
-                db.execute("INSERT INTO state(key,value) VALUES('worker_last_collect',?) "
-                           "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (now().isoformat(),))
-                db.commit()
                 keyword = next_keyword(db)
                 try:
                     collect(db, run, keyword)
+                    db.execute("INSERT INTO state(key,value) VALUES('worker_last_collect',?) "
+                               "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (now().isoformat(),))
+                    db.commit()
                 except RuntimeError as error:
                     run.step("coleta", False, str(error))  # segue com candidatas já coletadas (<2h)
 
