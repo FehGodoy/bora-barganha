@@ -132,13 +132,17 @@ def collect(db: sqlite3.Connection, run: Run, keyword: str) -> None:
     secret = os.environ.get("SHOPEE_APP_SECRET", "").strip()
     if not app_id or not secret:
         raise RuntimeError("Credenciais Shopee ausentes")
-    for attempt in range(2):
+    # A Shopee devolve "10000 System Error" de forma intermitente (recusa instantânea do lado deles,
+    # sem relação com campos ou palavra-chave). Tenta até 4 vezes, trocando o termo, com o intervalo de 31 s.
+    attempts = 4
+    for attempt in range(attempts):
         try:
             offers = fetch_offers(db, app_id, secret, keyword)
             break
         except RuntimeError as error:
-            if attempt == 0 and "10000" in str(error):
-                run.step("coleta", False, f"erro 10000 em '{keyword}', repetindo")
+            if attempt < attempts - 1 and "10000" in str(error):
+                run.step("coleta", False, f"erro 10000 em '{keyword}', tentando outro termo")
+                keyword = next_keyword(db)
                 continue
             raise
     candidates, held = store_offers(db, offers)
