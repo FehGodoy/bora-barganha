@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Bora Barganha – Captura",
+  "version": "0.1.0",
+  "description": "Envia a oferta do Mercado Livre aberta na aba, com seu link de afiliado, para a fila do Bora Barganha.",
+  "permissions": [],
+  "host_permissions": ["https://ihomqsftquazbujfdsnw.supabase.co/*"],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://www.mercadolivre.com.br/*", "https://produto.mercadolivre.com.br/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+#bora-capture-btn {
+  position: fixed; right: 20px; bottom: 20px; z-index: 2147483647;
+  background: #f65c45; color: #fff8ec; border: 0; border-radius: 999px;
+  padding: 12px 18px; font: 700 15px/1 system-ui, sans-serif; cursor: pointer;
+  box-shadow: 0 6px 18px rgba(38, 26, 41, .3);
+}
+#bora-capture-btn:disabled { opacity: .6; cursor: wait; }
+#bora-capture-toast {
+  position: fixed; right: 20px; bottom: 74px; z-index: 2147483647; max-width: 320px;
+  background: #261a29; color: #fff8ec; border-radius: 12px; padding: 10px 14px;
+  font: 500 14px/1.35 system-ui, sans-serif; box-shadow: 0 6px 18px rgba(0, 0, 0, .3);
+}
+#bora-capture-toast.err { background: #8a1f12; }

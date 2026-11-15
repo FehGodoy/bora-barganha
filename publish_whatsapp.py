@@ -18,6 +18,7 @@ from pathlib import Path
 from collect_shopee import DB_PATH, open_db
 from evolution_publisher import GROUP_JID, list_groups, request_json, settings
 from render_offer import OUT_DIR, download_image, render
+from mercadolivre_queue import PREFIX as ML_PREFIX, ml_offer
 from revalidate_shopee import current_offer, matches_draft
 
 MAX_PER_DAY = 3
@@ -137,7 +138,10 @@ def publish(path: Path, send: bool) -> None:
     validate_group(base, instance, api_key, jid)
     with open_db(DB_PATH) as db:
         ensure_tables(db)
-        item = current_offer(db, draft["listing_key"])
+        if draft["listing_key"].startswith(ML_PREFIX):
+            item = ml_offer(db, draft["listing_key"])
+        else:
+            item = current_offer(db, draft["listing_key"])
         matches_draft(draft, item)
         db.row_factory = sqlite3.Row
         row = db.execute("SELECT * FROM listings WHERE listing_key=?", (draft["listing_key"],)).fetchone()

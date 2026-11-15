@@ -77,12 +77,13 @@ def select_candidate(db: sqlite3.Connection, listing_key: str | None) -> sqlite3
     if listing_key:
         rows = db.execute("SELECT * FROM listings WHERE listing_key=?", (listing_key,)).fetchall()
     else:
-        rows = db.execute("SELECT * FROM listings WHERE status LIKE 'candidata%' ORDER BY sales DESC LIMIT 50").fetchall()
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=2)
+        rows = db.execute("SELECT * FROM listings WHERE status LIKE 'candidata%' ORDER BY (listing_key LIKE 'mercadolivre:%') DESC, COALESCE(sales,0) DESC LIMIT 50").fetchall()
+    from mercadolivre_queue import PREFIX, max_age
     for row in rows:
         if not str(row["status"]).startswith("candidata") or not row["image_url"] or not row["offer_link"]:
             continue
-        if datetime.fromisoformat(row["last_seen"]) < cutoff:
+        age_limit = max_age() if row["listing_key"].startswith(PREFIX) else timedelta(hours=2)
+        if datetime.fromisoformat(row["last_seen"]) < datetime.now(timezone.utc) - age_limit:
             continue
         previous = db.execute("SELECT 1 FROM publications WHERE canonical_key=? AND channel='whatsapp' AND published_at>? LIMIT 1",
                               (row["canonical_key"], (datetime.now(timezone.utc) - timedelta(days=7)).isoformat())).fetchone()

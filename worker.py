@@ -19,6 +19,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from collect_shopee import DB_PATH, fetch_offers, open_db, store_offers
+from mercadolivre_queue import ingest as ingest_ml
 from prepare_offer import load_openai_env, prepare, select_candidate
 from publish_whatsapp import MAX_PER_DAY, MIN_GAP, ensure_tables, publish
 from shopee_probe import load_local_env
@@ -159,6 +160,13 @@ def run_cycle(send: bool, skip_collect: bool) -> int:
                     collect(db, run, keyword)
                 except RuntimeError as error:
                     run.step("coleta", False, str(error))  # segue com candidatas já coletadas (<2h)
+
+            try:
+                imported, held = ingest_ml(db)
+                if imported or held:
+                    run.step("fila_mercadolivre", True, f"{imported} importadas, {held} retidas")
+            except Exception as error:  # noqa: BLE001
+                run.step("fila_mercadolivre", False, str(error))
 
             if blocked and send:
                 run.finish("collected_only", blocked)

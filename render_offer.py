@@ -103,7 +103,7 @@ def render(row: sqlite3.Row, product: Image.Image, display_title: str | None = N
     draw.rounded_rectangle((54, 1032, 700, 1247), radius=28, fill=CREAM, outline=INK, width=5)
     draw.text((85, 1058), label, font=font(31), fill=INK)
     draw.text((85, 1110), price, font=font(103 if len(price) < 11 else 84), fill=INK)
-    draw.text((1020, 1212), "SHOPEE", font=font(30), fill=CREAM, anchor="rt")
+    draw.text((1020, 1212), ("MERCADO LIVRE" if str(row["listing_key"]).startswith("mercadolivre:") else "SHOPEE"), font=font(30), fill=CREAM, anchor="rt")
     draw.rectangle((0, 1268, 1080, 1350), fill=INK)
     draw.text((540, 1285), "CONFIRA O PREÇO NO LINK DO GRUPO", font=font(32), fill=CREAM, anchor="mt")
 
