@@ -32,7 +32,12 @@ KEYWORDS = [
     "maquiagem", "skincare", "protetor solar", "serum facial", "hidratante facial",
     "base liquida", "corretivo", "mascara de cilios", "batom", "shampoo",
     "condicionador", "mascara capilar", "perfume feminino", "body splash", "esmalte",
+    "gloss labial", "delineador", "paleta de sombras", "po compacto", "blush",
+    "agua micelar", "sabonete facial", "vitamina c facial", "acido hialuronico", "creme para olhos",
+    "oleo capilar", "leave in", "creme de pentear", "hidratante corporal", "desodorante",
+    "perfume masculino", "esponja de maquiagem", "pinceis de maquiagem", "secador de cabelo", "prancha de cabelo",
 ]
+COLLECT_EVERY = timedelta(minutes=50)
 MAX_PREPARE_ATTEMPTS = 3
 
 
@@ -108,7 +113,7 @@ def send_capacity(db: sqlite3.Connection) -> str | None:
         return "limite diário atingido"
     latest = db.execute("SELECT MAX(published_at) FROM publications WHERE channel='whatsapp'").fetchone()[0]
     if latest and datetime.fromisoformat(latest) > current - MIN_GAP:
-        return "intervalo mínimo de 3h ainda não cumprido"
+        return f"intervalo mínimo de {int(MIN_GAP.total_seconds() // 60)} min ainda não cumprido"
     return None
 
 
@@ -154,7 +159,13 @@ def run_cycle(send: bool, skip_collect: bool) -> int:
                 run.finish("blocked", blocked)
                 return 3
 
+            last = db.execute("SELECT value FROM state WHERE key='worker_last_collect'").fetchone()
+            if last and now() - datetime.fromisoformat(last[0]) < COLLECT_EVERY:
+                skip_collect = True
             if not skip_collect:
+                db.execute("INSERT INTO state(key,value) VALUES('worker_last_collect',?) "
+                           "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (now().isoformat(),))
+                db.commit()
                 keyword = next_keyword(db)
                 try:
                     collect(db, run, keyword)

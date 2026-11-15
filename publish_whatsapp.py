@@ -21,8 +21,9 @@ from render_offer import OUT_DIR, download_image, render
 from mercadolivre_queue import PREFIX as ML_PREFIX, ml_offer
 from revalidate_shopee import current_offer, matches_draft
 
-MAX_PER_DAY = 3
-MIN_GAP = timedelta(hours=3)
+# Ritmo configurável (variáveis do repositório no GitHub). Padrão conservador se ausentes.
+MAX_PER_DAY = int(os.environ.get("BORA_MAX_PER_DAY", "3"))
+MIN_GAP = timedelta(minutes=int(os.environ.get("BORA_MIN_GAP_MINUTES", "180")))
 
 
 def read_draft(path: Path) -> dict:
@@ -94,7 +95,7 @@ def reserve(db: sqlite3.Connection, draft: dict) -> str:
             UNION ALL SELECT reserved_at AS moment FROM publication_jobs WHERE channel='whatsapp' AND status='reserved'
         ) AS moments""").fetchone()[0]
         if latest and datetime.fromisoformat(latest) > now - MIN_GAP:
-            raise RuntimeError("Intervalo mínimo de três horas entre ofertas não cumprido")
+            raise RuntimeError(f"Intervalo mínimo de {int(MIN_GAP.total_seconds() // 60)} min entre ofertas não cumprido")
         db.execute("INSERT INTO publication_jobs(draft_id,listing_key,canonical_key,channel,status,reserved_at) VALUES(?,?,?,?,?,?)",
                    (identity, draft["listing_key"], draft["canonical_key"], "whatsapp", "reserved", now.isoformat()))
         db.commit()

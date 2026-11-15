@@ -22,7 +22,7 @@ ROOT = Path(__file__).parent
 DB_PATH = ROOT / "data" / "offers.sqlite3"
 WAIT_SECONDS = 31
 QUERY = """query {
-  productOfferV2(keyword: %s, sortType: 2, limit: 5, page: 1) {
+  productOfferV2(keyword: %s, sortType: 2, limit: 30, page: 1) {
     nodes {
       itemId shopId productName imageUrl priceMin priceMax ratingStar sales
       priceDiscountRate commissionRate productLink offerLink periodEndTime

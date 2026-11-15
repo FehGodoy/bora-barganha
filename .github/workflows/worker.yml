@@ -2,9 +2,10 @@ name: worker
 
 on:
   schedule:
-    # Horário em UTC. 11h-00h UTC = 8h-21h em Brasília. Minuto 17 evita o pico do cron do GitHub.
-    - cron: "17 11-23 * * *"
-    - cron: "17 0 * * *"
+    # A cada 20 min, em UTC: 11h-00h UTC = 8h-21h em Brasília. Minutos "quebrados" fogem do pico do cron.
+    # O ritmo real de envio é controlado por BORA_MIN_GAP_MINUTES e BORA_MAX_PER_DAY.
+    - cron: "7,27,47 11-23 * * *"
+    - cron: "7,27,47 0 * * *"
   workflow_dispatch:
     inputs:
       send:
@@ -19,7 +20,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -41,6 +42,8 @@ jobs:
           # Chave geral: só envia quando a variável do repositório for "true".
           BORA_OFFER_SEND_ENABLED: ${{ vars.BORA_OFFER_SEND_ENABLED || 'false' }}
           BORA_WORKER_PAUSED: ${{ vars.BORA_WORKER_PAUSED || 'false' }}
+          BORA_MAX_PER_DAY: ${{ vars.BORA_MAX_PER_DAY || '3' }}
+          BORA_MIN_GAP_MINUTES: ${{ vars.BORA_MIN_GAP_MINUTES || '180' }}
         run: |
           if [ "${{ vars.BORA_OFFER_SEND_ENABLED }}" = "true" ] || [ "${{ inputs.send }}" = "true" ]; then
             python worker.py --send
