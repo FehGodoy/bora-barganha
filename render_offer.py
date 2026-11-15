@@ -20,7 +20,12 @@ CREAM = "#fff8ec"
 CORAL = "#f65c45"
 PINK = "#ec87a1"
 MINT = "#bcebd3"
-FONT = Path(r"C:\Windows\Fonts\trebucbd.ttf")
+FONT_CANDIDATES = [
+    ROOT / "assets" / "font-bold.ttf",                             # fonte do projeto, se adicionada
+    Path(r"C:\Windows\Fonts\trebucbd.ttf"),                        # Windows (local)
+    Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),  # Ubuntu (GitHub Actions)
+]
+FONT = next((p for p in FONT_CANDIDATES if p.exists()), FONT_CANDIDATES[-1])
 
 
 def font(size: int) -> ImageFont.FreeTypeFont:
@@ -110,7 +115,8 @@ def render(row: sqlite3.Row, product: Image.Image, display_title: str | None = N
 
 
 def main() -> None:
-    with sqlite3.connect(DB_PATH) as db:
+    from collect_shopee import open_db
+    with open_db(DB_PATH) as db:
         row = select_offer(db)
         image = download_image(row["image_url"])
         output = render(row, image)

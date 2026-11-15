@@ -17,7 +17,7 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from collect_shopee import DB_PATH
+from collect_shopee import DB_PATH, open_db
 from render_offer import OUT_DIR, download_image, render
 
 ROOT = Path(__file__).parent
@@ -199,14 +199,14 @@ def main() -> int:
         print("OPENAI_API_KEY ausente no .env.local; nenhuma chamada à IA foi feita", file=sys.stderr)
         return 2
     try:
-        with sqlite3.connect(DB_PATH) as db:
+        with open_db(DB_PATH) as db:
             row = select_candidate(db, args.listing_key)
             result = prepare(db, row, api_key, model)
         if result:
             print(f"Rascunho pronto: {result}")
             print("Nenhuma publicação foi feita.")
         return 0
-    except (RuntimeError, ValueError, OSError, sqlite3.Error) as exc:
+    except (RuntimeError, ValueError, OSError, Exception) as exc:
         print(f"Preparo interrompido: {exc}", file=sys.stderr)
         return 1
 

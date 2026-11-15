@@ -74,7 +74,7 @@ def main() -> int:
         matches_draft(draft, item)
         print("Preço, link e anúncio confirmados na Shopee. Nenhuma publicação foi feita.")
         return 0
-    except (OSError, ValueError, RuntimeError, KeyError, sqlite3.Error) as exc:
+    except (OSError, ValueError, RuntimeError, KeyError, Exception) as exc:
         print(f"Revalidação bloqueou o rascunho: {exc}", file=sys.stderr)
         return 1
 

@@ -55,12 +55,12 @@ def ensure_worker_tables(db: sqlite3.Connection) -> None:
 class Run:
     def __init__(self, db: sqlite3.Connection, mode: str):
         self.db = db
-        self.id = db.execute("INSERT INTO worker_runs(started_at,mode) VALUES(?,?)", (now().isoformat(), mode)).lastrowid
+        self.id = db.execute("INSERT INTO worker_runs(started_at,mode) VALUES(?,?) RETURNING id", (now().isoformat(), mode)).fetchone()[0]
         db.commit()
 
     def step(self, name: str, ok: bool, detail: str = "") -> None:
         self.db.execute("INSERT INTO worker_steps(run_id,at,step,ok,detail) VALUES(?,?,?,?,?)",
-                        (self.id, now().isoformat(), name, int(ok), detail[:1000]))
+                        (self.id, now().isoformat(), name, bool(ok), detail[:1000]))
         self.db.commit()
         print(f"[{'ok' if ok else 'xx'}] {name}: {detail}", flush=True)
 

@@ -15,6 +15,7 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
+from db import connect
 from shopee_probe import load_local_env, signed_request
 
 ROOT = Path(__file__).parent
@@ -48,9 +49,7 @@ def amount(value: object) -> Decimal | None:
 
 
 def open_db(path: Path) -> sqlite3.Connection:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    db = sqlite3.connect(path)
-    db.row_factory = sqlite3.Row
+    db = connect(path)
     db.executescript("""
     CREATE TABLE IF NOT EXISTS listings (
       listing_key TEXT PRIMARY KEY,

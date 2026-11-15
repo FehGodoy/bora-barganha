@@ -47,6 +47,8 @@ def validate_group(base: str, instance: str, api_key: str, jid: str) -> None:
 
 
 def ensure_tables(db: sqlite3.Connection) -> None:
+    if getattr(db, "is_pg", False):
+        return  # schema gerenciado em supabase/schema.sql
     db.execute("""CREATE TABLE IF NOT EXISTS publication_jobs (
         draft_id TEXT PRIMARY KEY, listing_key TEXT NOT NULL, canonical_key TEXT NOT NULL, channel TEXT NOT NULL,
         status TEXT NOT NULL, reserved_at TEXT NOT NULL, external_id TEXT)""")
@@ -89,7 +91,7 @@ def reserve(db: sqlite3.Connection, draft: dict) -> str:
         latest = db.execute("""SELECT MAX(moment) FROM (
             SELECT published_at AS moment FROM publications WHERE channel='whatsapp'
             UNION ALL SELECT reserved_at AS moment FROM publication_jobs WHERE channel='whatsapp' AND status='reserved'
-        )""").fetchone()[0]
+        ) AS moments""").fetchone()[0]
         if latest and datetime.fromisoformat(latest) > now - MIN_GAP:
             raise RuntimeError("Intervalo mínimo de três horas entre ofertas não cumprido")
         db.execute("INSERT INTO publication_jobs(draft_id,listing_key,canonical_key,channel,status,reserved_at) VALUES(?,?,?,?,?,?)",
@@ -169,7 +171,7 @@ def main() -> int:
     try:
         publish(args.draft, args.send)
         return 0
-    except (OSError, ValueError, RuntimeError, KeyError, sqlite3.Error) as exc:
+    except (OSError, ValueError, RuntimeError, KeyError, Exception) as exc:
         print(f"Publicação bloqueada: {exc}", file=sys.stderr)
         return 1
 

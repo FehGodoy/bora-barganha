@@ -1,0 +1,49 @@
+name: worker
+
+on:
+  schedule:
+    # Horário em UTC. 11h-00h UTC = 8h-21h em Brasília. Minuto 17 evita o pico do cron do GitHub.
+    - cron: "17 11-23 * * *"
+    - cron: "17 0 * * *"
+  workflow_dispatch:
+    inputs:
+      send:
+        description: "Enviar de verdade (ainda exige BORA_OFFER_SEND_ENABLED=true)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: worker
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Rodada do worker
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SHOPEE_APP_ID: ${{ secrets.SHOPEE_APP_ID }}
+          SHOPEE_APP_SECRET: ${{ secrets.SHOPEE_APP_SECRET }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4.1-mini' }}
+          EVOLUTION_BASE_URL: ${{ secrets.EVOLUTION_BASE_URL }}
+          EVOLUTION_INSTANCE: ${{ secrets.EVOLUTION_INSTANCE }}
+          EVOLUTION_API_KEY: ${{ secrets.EVOLUTION_API_KEY }}
+          BORA_GROUP_JID: ${{ secrets.BORA_GROUP_JID }}
+          # Chave geral: só envia quando a variável do repositório for "true".
+          BORA_OFFER_SEND_ENABLED: ${{ vars.BORA_OFFER_SEND_ENABLED || 'false' }}
+          BORA_WORKER_PAUSED: ${{ vars.BORA_WORKER_PAUSED || 'false' }}
+        run: |
+          if [ "${{ vars.BORA_OFFER_SEND_ENABLED }}" = "true" ] || [ "${{ inputs.send }}" = "true" ]; then
+            python worker.py --send
+          else
+            python worker.py
+          fi
