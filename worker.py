@@ -22,6 +22,7 @@ from collect_shopee import DB_PATH, fetch_offers, open_db, store_offers
 from mercadolivre_queue import ingest as ingest_ml
 from prepare_offer import load_openai_env, prepare, select_candidate
 from publish_whatsapp import MAX_PER_DAY, MIN_GAP, ensure_tables, publish
+from revalidate_shopee import current_offer
 from shopee_probe import load_local_env
 
 ROOT = Path(__file__).parent
@@ -39,6 +40,7 @@ KEYWORDS = [
 ]
 COLLECT_EVERY = timedelta(minutes=50)
 MAX_PREPARE_ATTEMPTS = 3
+REFRESH_EXISTING_LIMIT = 8
 
 
 def now() -> datetime:
@@ -149,6 +151,26 @@ def collect(db: sqlite3.Connection, run: Run, keyword: str) -> None:
     run.step("coleta", True, f"'{keyword}': {len(offers)} anúncios, {candidates} candidatos, {held} retidos")
 
 
+def refresh_existing(db: sqlite3.Connection, run: Run) -> int:
+    """Revalida itens conhecidos quando a busca por palavra-chave falha na Shopee."""
+    rows = db.execute("""SELECT * FROM listings WHERE listing_key LIKE 'shopee:%' AND status LIKE 'candidata%'
+                         ORDER BY last_seen ASC, COALESCE(sales,0) DESC LIMIT ?""",
+                      (REFRESH_EXISTING_LIMIT,)).fetchall()
+    refreshed = 0
+    for row in rows:
+        try:
+            item = current_offer(db, row["listing_key"])
+            # A consulta exata não precisa solicitar estes campos; preserva os valores já conhecidos.
+            item.setdefault("productLink", row["product_link"])
+            item.setdefault("commissionRate", row["commission_rate"])
+            candidates, _ = store_offers(db, [item])
+            refreshed += candidates
+        except (RuntimeError, ValueError, KeyError) as error:
+            run.step("renovacao", False, f"item não atualizado: {type(error).__name__}")
+    run.step("renovacao", bool(refreshed), f"{refreshed} de {len(rows)} ofertas conhecidas revalidadas")
+    return refreshed
+
+
 def run_cycle(send: bool, skip_collect: bool, collect_only: bool = False) -> int:
     with open_db(DB_PATH) as db:
         ensure_worker_tables(db)
@@ -175,6 +197,8 @@ def run_cycle(send: bool, skip_collect: bool, collect_only: bool = False) -> int
                     db.commit()
                 except RuntimeError as error:
                     run.step("coleta", False, str(error))  # segue com candidatas já coletadas (<2h)
+                    if "10000" in str(error):
+                        refresh_existing(db, run)
 
             try:
                 imported, held = ingest_ml(db)
