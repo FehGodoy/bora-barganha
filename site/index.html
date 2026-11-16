@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fff8ec">
+  <meta name="description" content="Ofertas de beleza escolhidas pelo Bora Barganha. Compare, descubra e aproveite preços atualizados ao longo do dia.">
+  <title>Bora Barganha — beleza que vale a pena</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="topline"><span>✳</span> Seu radar de achadinhos de beleza <span>✳</span></div>
+  <header class="header shell">
+    <a class="brand" href="#inicio" aria-label="Bora Barganha, início">
+      <span class="brand-icon" aria-hidden="true">✳</span><span>BORA<br><strong>BARGANHA</strong></span>
+    </a>
+    <nav aria-label="Navegação principal"><a href="#ofertas">Ofertas</a><a href="#como-funciona">Como funciona</a></nav>
+    <a class="header-cta" href="#ofertas">Ver achadinhos <span aria-hidden="true">↗</span></a>
+  </header>
+
+  <main id="inicio">
+    <section class="hero shell" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="pulse"></span> A vitrine da beleza esperta</div>
+        <h1 id="hero-title">Seu próximo <em>achado</em> começa aqui<span class="period">.</span></h1>
+        <p>Os melhores achadinhos de beleza em um só lugar. A gente garimpa, você escolhe o que combina com você.</p>
+        <a class="button dark" href="#ofertas">Explorar ofertas <span aria-hidden="true">↗</span></a>
+        <div class="hero-note"><span class="note-icon">♡</span> Preços e disponibilidade podem mudar nas lojas.</div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="hero-orbit orbit-one"></div><div class="hero-orbit orbit-two"></div>
+        <div class="art-tag">BELEZA<br>QUE<br>VALE ✳</div>
+        <div class="art-ticket ticket-one">Pele, cabelo<br>e autocuidado <span>↗</span></div>
+        <div class="art-ticket ticket-two">ACHOU?<br>APROVEITOU!</div>
+        <div class="art-spark spark-one">✳</div><div class="art-spark spark-two">✦</div>
+      </div>
+    </section>
+
+    <section class="ticker" aria-label="Categorias de beleza"><div>SKINCARE <span>✳</span> CABELO <span>✳</span> MAQUIAGEM <span>✳</span> PERFUMARIA <span>✳</span> AUTOCUIDADO <span>✳</span> SKINCARE <span>✳</span> CABELO <span>✳</span> MAQUIAGEM <span>✳</span></div></section>
+
+    <section class="offers shell" id="ofertas" aria-labelledby="offers-title">
+      <div class="section-heading"><div><div class="eyebrow coral">GARIMPO DO DIA</div><h2 id="offers-title">Ofertas em destaque<span class="period">.</span></h2><p>Uma seleção que muda ao longo do dia, direto das lojas parceiras.</p></div><div class="updated" id="updated" aria-live="polite">Carregando ofertas…</div></div>
+      <div class="toolbar">
+        <div class="filters" role="group" aria-label="Filtrar por loja">
+          <button class="filter active" data-source="all" aria-pressed="true">Todas <span id="count-all"></span></button>
+          <button class="filter" data-source="shopee" aria-pressed="false">Shopee</button>
+          <button class="filter" data-source="mercadolivre" aria-pressed="false">Mercado Livre</button>
+        </div>
+        <label class="sort-label">Ordenar por <select id="sort"><option value="recent">Mais recentes</option><option value="low">Menor preço</option><option value="high">Maior preço</option></select></label>
+      </div>
+      <div id="offer-grid" class="offer-grid" aria-live="polite"></div>
+      <div id="empty" class="empty" hidden><div class="empty-mark">✳</div><h3>Nenhum achadinho fresquinho por aqui.</h3><p>Estamos atualizando a seleção. Volte em alguns minutos para ver as próximas ofertas.</p><button id="retry" class="button dark" type="button">Atualizar agora ↗</button></div>
+    </section>
+
+    <section class="how shell" id="como-funciona" aria-labelledby="how-title"><div><div class="eyebrow coral">DO GARIMPO AO CLIQUE</div><h2 id="how-title">Beleza boa é beleza <em>bem encontrada.</em></h2></div><div class="how-steps"><article><span>01 /</span><h3>A gente garimpa</h3><p>Buscamos ofertas de beleza na Shopee e no Mercado Livre.</p></article><article><span>02 /</span><h3>Você descobre</h3><p>Mostramos as ofertas recentes com preço, imagem e link da loja.</p></article><article><span>03 /</span><h3>Compra na loja</h3><p>Ao clicar, você finaliza a compra no site da loja parceira.</p></article></div></section>
+  </main>
+  <footer class="footer"><div class="shell footer-inner"><div class="footer-brand">BORA<br><strong>BARGANHA</strong><span>✳</span></div><div><p>Seu cantinho de achadinhos de beleza.</p><small>Alguns links são de afiliados. Podemos receber comissão pela compra, sem custo extra para você. Confira preço e condições na loja antes de comprar.</small></div><a href="#inicio">Voltar ao topo ↑</a></div></footer>
+</body>
+</html>

@@ -149,7 +149,7 @@ def collect(db: sqlite3.Connection, run: Run, keyword: str) -> None:
     run.step("coleta", True, f"'{keyword}': {len(offers)} anúncios, {candidates} candidatos, {held} retidos")
 
 
-def run_cycle(send: bool, skip_collect: bool) -> int:
+def run_cycle(send: bool, skip_collect: bool, collect_only: bool = False) -> int:
     with open_db(DB_PATH) as db:
         ensure_worker_tables(db)
         run = Run(db, "send" if send else "dry-run")
@@ -158,7 +158,7 @@ def run_cycle(send: bool, skip_collect: bool) -> int:
             if reason:
                 run.finish("paused", reason)
                 return 0
-            blocked = send_capacity(db)
+            blocked = None if collect_only else send_capacity(db)
             if blocked and "incerto" in blocked:
                 run.finish("blocked", blocked)
                 return 3
@@ -182,6 +182,10 @@ def run_cycle(send: bool, skip_collect: bool) -> int:
                     run.step("fila_mercadolivre", True, f"{imported} importadas, {held} retidas")
             except Exception as error:  # noqa: BLE001
                 run.step("fila_mercadolivre", False, str(error))
+
+            if collect_only:
+                run.finish("collected_only", "ofertas atualizadas para a vitrine")
+                return 0
 
             if blocked and send:
                 run.finish("collected_only", blocked)
@@ -243,6 +247,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Uma rodada do ciclo Shopee -> WhatsApp")
     parser.add_argument("--send", action="store_true", help="Envia de verdade (exige BORA_OFFER_SEND_ENABLED=true)")
     parser.add_argument("--skip-collect", action="store_true", help="Usa candidatas já coletadas")
+    parser.add_argument("--collect-only", action="store_true", help="Coleta e importa ofertas sem preparar ou enviar")
     parser.add_argument("--status", action="store_true", help="Mostra últimas rodadas e bloqueios")
     args = parser.parse_args()
     if args.status:
@@ -251,7 +256,7 @@ def main() -> int:
         print("Outra rodada está em execução; saindo.", file=sys.stderr)
         return 4
     try:
-        return run_cycle(args.send, args.skip_collect)
+        return run_cycle(args.send, args.skip_collect, args.collect_only)
     finally:
         LOCK_FILE.unlink(missing_ok=True)
 

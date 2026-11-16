@@ -1,0 +1,8 @@
+.env
+.env.*
+data/
+extension/config.js
+.git/
+site/dist/
+__pycache__/
+tests/

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "python build_site.py --empty",
+  "outputDirectory": "site/dist",
+  "functions": {
+    "api/offers.py": {
+      "excludeFiles": "{tests/**,site/**,data/**,extension/**,.env*,*.sqlite3}"
+    }
+  }
+}

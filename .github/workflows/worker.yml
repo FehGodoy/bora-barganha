@@ -3,15 +3,10 @@ name: worker
 on:
   schedule:
     # A cada 20 min, em UTC: 11h-00h UTC = 8h-21h em Brasília. Minutos "quebrados" fogem do pico do cron.
-    # O ritmo real de envio é controlado por BORA_MIN_GAP_MINUTES e BORA_MAX_PER_DAY.
+    # A coleta alimenta a vitrine sem enviar mensagens.
     - cron: "7,27,47 11-23 * * *"
     - cron: "7,27,47 0 * * *"
   workflow_dispatch:
-    inputs:
-      send:
-        description: "Enviar de verdade (ainda exige BORA_OFFER_SEND_ENABLED=true)"
-        type: boolean
-        default: false
 
 concurrency:
   group: worker
@@ -33,20 +28,5 @@ jobs:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           SHOPEE_APP_ID: ${{ secrets.SHOPEE_APP_ID }}
           SHOPEE_APP_SECRET: ${{ secrets.SHOPEE_APP_SECRET }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4.1-mini' }}
-          EVOLUTION_BASE_URL: ${{ secrets.EVOLUTION_BASE_URL }}
-          EVOLUTION_INSTANCE: ${{ secrets.EVOLUTION_INSTANCE }}
-          EVOLUTION_API_KEY: ${{ secrets.EVOLUTION_API_KEY }}
-          BORA_GROUP_JID: ${{ secrets.BORA_GROUP_JID }}
-          # Chave geral: só envia quando a variável do repositório for "true".
-          BORA_OFFER_SEND_ENABLED: ${{ vars.BORA_OFFER_SEND_ENABLED || 'false' }}
           BORA_WORKER_PAUSED: ${{ vars.BORA_WORKER_PAUSED || 'false' }}
-          BORA_MAX_PER_DAY: ${{ vars.BORA_MAX_PER_DAY || '3' }}
-          BORA_MIN_GAP_MINUTES: ${{ vars.BORA_MIN_GAP_MINUTES || '180' }}
-        run: |
-          if [ "${{ vars.BORA_OFFER_SEND_ENABLED }}" = "true" ] || [ "${{ inputs.send }}" = "true" ]; then
-            python worker.py --send
-          else
-            python worker.py
-          fi
+        run: python worker.py --collect-only
