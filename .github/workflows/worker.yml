@@ -1,11 +1,8 @@
 name: worker
 
 on:
-  schedule:
-    # A cada 20 min, em UTC: 11h-00h UTC = 8h-21h em Brasília. Minutos "quebrados" fogem do pico do cron.
-    # A coleta alimenta a vitrine sem enviar mensagens.
-    - cron: "7,27,47 11-23 * * *"
-    - cron: "7,27,47 0 * * *"
+  # Disparado pelo pg_cron do Supabase (supabase/dispatch_cron.sql): 8h-21h de Brasília, minutos 7/27/47.
+  # O cron do próprio GitHub atrasava ou pulava execuções.
   workflow_dispatch:
 
 concurrency:
