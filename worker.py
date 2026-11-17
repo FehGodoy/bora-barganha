@@ -30,18 +30,23 @@ ROOT = Path(__file__).parent
 PAUSE_FILE = ROOT / "PAUSE"
 LOCK_FILE = ROOT / "data" / "worker.lock"
 LOCK_STALE = timedelta(minutes=30)
-KEYWORDS = [
-    "maquiagem", "skincare", "protetor solar", "serum facial", "hidratante facial",
-    "base liquida", "corretivo", "mascara de cilios", "batom", "shampoo",
-    "condicionador", "mascara capilar", "perfume feminino", "body splash", "esmalte",
-    "gloss labial", "delineador", "paleta de sombras", "po compacto", "blush",
-    "agua micelar", "sabonete facial", "vitamina c facial", "acido hialuronico", "creme para olhos",
-    "oleo capilar", "leave in", "creme de pentear", "hidratante corporal", "desodorante",
-    "perfume masculino", "esponja de maquiagem", "pinceis de maquiagem", "secador de cabelo", "prancha de cabelo",
-    "protetor solar facial", "gel de limpeza facial", "lip oil", "blush cremoso", "delineador liquido",
-    "batom matte", "mascara de tratamento capilar", "shampoo anticaspa", "serum vitamina c",
-    "creme para pentear", "perfume floral", "body splash feminino", "hidratante para pele seca",
-]
+# Grupos de categoria; a lista final intercala os grupos para cada rodada trazer uma mistura.
+KEYWORD_GROUPS = {
+    "maquiagem": ["maquiagem", "base liquida", "corretivo", "mascara de cilios", "batom", "gloss labial",
+                  "delineador", "paleta de sombras", "po compacto", "blush", "lip oil", "batom matte"],
+    "pele": ["skincare", "protetor solar", "serum facial", "hidratante facial", "agua micelar", "sabonete facial",
+             "vitamina c facial", "acido hialuronico", "creme para olhos", "protetor solar facial",
+             "gel de limpeza facial", "serum vitamina c"],
+    "cabelo": ["shampoo", "condicionador", "mascara capilar", "oleo capilar", "leave in", "creme de pentear",
+               "secador de cabelo", "prancha de cabelo", "mascara de tratamento capilar", "shampoo anticaspa",
+               "creme para pentear"],
+    "corpo_perfume": ["perfume feminino", "body splash", "esmalte", "hidratante corporal", "desodorante",
+                      "perfume masculino", "esponja de maquiagem", "pinceis de maquiagem", "perfume floral",
+                      "body splash feminino", "hidratante para pele seca"],
+}
+KEYWORDS = [group[i] for i in range(max(map(len, KEYWORD_GROUPS.values())))
+            for group in KEYWORD_GROUPS.values() if i < len(group)]
+KEYWORDS_PER_RUN = 3  # cada busca espera 31 s pela Shopee
 COLLECT_EVERY = timedelta(minutes=50)
 MAX_PREPARE_ATTEMPTS = 3
 REFRESH_EXISTING_LIMIT = 8
@@ -219,18 +224,23 @@ def run_cycle(send: bool, skip_collect: bool, collect_only: bool = False) -> int
             if last and now() - datetime.fromisoformat(last[0]) < COLLECT_EVERY:
                 skip_collect = True
             if not skip_collect:
-                keyword = next_keyword(db)
-                try:
-                    collected = collect(db, run, keyword)
+                collected, ok_any, failed_10000 = 0, False, False
+                for _ in range(KEYWORDS_PER_RUN):
+                    keyword = next_keyword(db)
+                    try:
+                        collected += collect(db, run, keyword)
+                        ok_any = True
+                    except RuntimeError as error:
+                        run.step("coleta", False, str(error))  # segue para o próximo termo
+                        failed_10000 = failed_10000 or "10000" in str(error)
+                if ok_any:
                     db.execute("INSERT INTO state(key,value) VALUES('worker_last_collect',?) "
                                "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (now().isoformat(),))
                     db.commit()
-                    if collected < 3:
-                        refresh_existing(db, run, limit=3)
-                except RuntimeError as error:
-                    run.step("coleta", False, str(error))  # segue com candidatas já coletadas (<2h)
-                    if "10000" in str(error):
-                        refresh_existing(db, run)
+                if failed_10000 and not ok_any:
+                    refresh_existing(db, run)
+                elif collected < 3:
+                    refresh_existing(db, run, limit=3)
 
             try:
                 campaign_count = refresh_campaigns(db)

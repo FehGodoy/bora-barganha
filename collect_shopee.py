@@ -66,6 +66,7 @@ def open_db(path: Path) -> sqlite3.Connection:
       first_seen TEXT NOT NULL,
       last_seen TEXT NOT NULL,
       lowest_seen TEXT,
+      original_price TEXT,
       status TEXT NOT NULL,
       hold_reason TEXT
     );
@@ -87,7 +88,22 @@ def open_db(path: Path) -> sqlite3.Connection:
     );
     CREATE TABLE IF NOT EXISTS state (key TEXT PRIMARY KEY, value TEXT NOT NULL);
     """)
+    if isinstance(db, sqlite3.Connection):
+        columns = {row[1] for row in db.execute("PRAGMA table_info(listings)")}
+        if "original_price" not in columns:
+            db.execute("ALTER TABLE listings ADD COLUMN original_price TEXT")
     return db
+
+
+def original_price(price: Decimal | None, discount_rate: object) -> Decimal | None:
+    """Preço "de" informado pela Shopee: preço atual dividido por (1 - desconto)."""
+    try:
+        rate = Decimal(str(discount_rate))
+    except (InvalidOperation, TypeError):
+        return None
+    if not price or not rate.is_finite() or rate < 5 or rate > 90:
+        return None
+    return (price / (1 - rate / 100)).quantize(Decimal("0.01"))
 
 
 def throttle(db: sqlite3.Connection) -> None:
@@ -185,20 +201,22 @@ def store_offers(db: sqlite3.Connection, offers: list[dict]) -> tuple[int, int]:
         if (old and old["image_url"] == item.get("imageUrl") and
                 str(old["hold_reason"] or "").startswith(("imagem reprovada:", "imagem promocional"))):
             status, reason = "retida", old["hold_reason"]
+        before = original_price(low, item.get("priceDiscountRate"))
         lowest = min(low, Decimal(old["lowest_seen"])) if low and old and old["lowest_seen"] else low
         db.execute("""INSERT INTO listings
-          (listing_key,canonical_key,title,image_url,offer_link,product_link,price_min,price_max,rating,sales,commission_rate,first_seen,last_seen,lowest_seen,status,hold_reason)
-          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+          (listing_key,canonical_key,title,image_url,offer_link,product_link,price_min,price_max,rating,sales,commission_rate,first_seen,last_seen,lowest_seen,original_price,status,hold_reason)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
           ON CONFLICT(listing_key) DO UPDATE SET
           canonical_key=excluded.canonical_key,title=excluded.title,image_url=excluded.image_url,
           offer_link=excluded.offer_link,product_link=excluded.product_link,
           price_min=excluded.price_min,price_max=excluded.price_max,rating=excluded.rating,
           sales=excluded.sales,commission_rate=excluded.commission_rate,
-          last_seen=excluded.last_seen,lowest_seen=excluded.lowest_seen,
+          last_seen=excluded.last_seen,lowest_seen=excluded.lowest_seen,original_price=excluded.original_price,
           status=excluded.status,hold_reason=excluded.hold_reason""",
           (listing_key, canonical, title, item.get("imageUrl"), item.get("offerLink"), item.get("productLink"),
            str(low) if low else None, str(high) if high else None, item.get("ratingStar"), int(item.get("sales") or 0),
-           item.get("commissionRate"), now, now, str(lowest) if lowest else None, status, reason))
+           item.get("commissionRate"), now, now, str(lowest) if lowest else None,
+           str(before) if before else None, status, reason))
         if low and high:
             db.execute("INSERT INTO price_history(listing_key,observed_at,price_min,price_max) VALUES(?,?,?,?)", (listing_key, now, str(low), str(high)))
         if status.startswith("candidata"):

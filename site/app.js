@@ -41,12 +41,27 @@ function card(offer) {
   const title = document.createElement('h3');
   title.className = 'card-title';
   title.textContent = offer.title;
+  const money = new Intl.NumberFormat('pt-BR', {style:'currency', currency:'BRL'});
   const label = document.createElement('div');
   label.className = 'card-price-label';
-  label.textContent = 'Por';
+  const before = Number(offer.original_price);
+  if (before > Number(offer.price)) {
+    const old = document.createElement('s');
+    old.textContent = `De ${money.format(before)}`;
+    const off = document.createElement('span');
+    off.className = 'card-off';
+    off.textContent = `-${Math.round((1 - Number(offer.price) / before) * 100)}%`;
+    label.append(old, ' ', off);
+    const discount = document.createElement('span');
+    discount.className = 'discount-badge';
+    discount.textContent = off.textContent;
+    imageBox.append(discount);
+  } else {
+    label.textContent = 'Por';
+  }
   const price = document.createElement('div');
   price.className = 'card-price';
-  price.textContent = new Intl.NumberFormat('pt-BR', {style:'currency', currency:'BRL'}).format(Number(offer.price));
+  price.textContent = (before > Number(offer.price) ? 'Por ' : '') + money.format(Number(offer.price));
   const link = document.createElement('a');
   link.className = 'card-link';
   link.href = offer.url;

@@ -26,7 +26,19 @@
       p_page_url: location.href.split("#")[0].split("?")[0],
       p_breadcrumb: breadcrumb,
       p_available: /InStock/i.test(String(offers.availability || "")),
+      p_original_price: originalPrice(Number(offers.price)),
     };
+  }
+
+  // Preço riscado ("De R$ X") do bloco principal de preço; null quando a página não mostra.
+  function originalPrice(current) {
+    const box = document.querySelector("#price, .ui-pdp-price") || document;
+    const el = box.querySelector("s.andes-money-amount--previous, .ui-pdp-price__original-value");
+    if (!el) return null;
+    const fraction = el.querySelector(".andes-money-amount__fraction")?.textContent.replace(/\D/g, "");
+    const cents = el.querySelector(".andes-money-amount__cents")?.textContent.replace(/\D/g, "") || "0";
+    const value = Number(`${fraction}.${cents.padEnd(2, "0")}`);
+    return fraction && value > current ? value : null;
   }
 
   function affiliateLink() {

@@ -52,7 +52,7 @@ class OffersApiTests(unittest.TestCase):
             status, headers, body = self.request()
         self.assertEqual(status, 200)
         self.assertEqual(len(body["offers"]), 1)
-        self.assertEqual(set(body["offers"][0]), {"id", "title", "source", "price", "image", "url", "observed_at"})
+        self.assertEqual(set(body["offers"][0]), {"id", "title", "source", "price", "original_price", "image", "url", "observed_at"})
         self.assertIn("s-maxage=300", headers["Cache-Control"])
 
 

@@ -36,7 +36,7 @@ class SiteExportTests(unittest.TestCase):
         rows = [
             base,
             {**base, "listing_key": "shopee:1:3"},
-            {**base, "listing_key": "shopee:1:4", "canonical_key": "velho", "last_seen": (now - timedelta(hours=3)).isoformat()},
+            {**base, "listing_key": "shopee:1:4", "canonical_key": "velho", "last_seen": (now - timedelta(hours=13)).isoformat()},
             {**base, "listing_key": "shopee:1:5", "canonical_key": "inseguro", "offer_link": "https://evil.example/"},
             {**base, "listing_key": "shopee:1:6", "canonical_key": "retido", "status": "retida"},
         ]
@@ -44,6 +44,11 @@ class SiteExportTests(unittest.TestCase):
         self.assertEqual(len(offers), 1)
         self.assertEqual(offers[0]["price"], "29.90")
         self.assertNotIn("sales", offers[0])
+        self.assertIsNone(offers[0]["original_price"])
+        discounted = select_offers([{**base, "original_price": "49.90"}], now)
+        self.assertEqual(discounted[0]["original_price"], "49.90")
+        tiny = select_offers([{**base, "original_price": "30.00"}], now)
+        self.assertIsNone(tiny[0]["original_price"])
 
     def test_mercado_livre_uses_six_hour_window_and_meli_link(self):
         now = datetime(2026, 11, 16, 15, tzinfo=timezone.utc)

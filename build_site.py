@@ -16,6 +16,7 @@ ROOT = Path(__file__).parent
 SITE = ROOT / "site"
 DIST = SITE / "dist"
 DATABASE = ROOT / "data" / "offers.sqlite3"
+SHOPEE_SITE_HOURS = 12  # o card mostra a hora em que o preço foi visto
 
 
 def _timestamp(value: object) -> datetime | None:
@@ -68,12 +69,15 @@ def select_offers(rows: list[dict], now: datetime) -> list[dict]:
         if source == "shopee" and any(word in str(row["title"]).lower() for word in ("chaveiro", "berloque")):
             continue
         observed = _timestamp(row["last_seen"])
-        max_age = timedelta(hours=6 if source == "mercadolivre" else 2)
+        max_age = timedelta(hours=6 if source == "mercadolivre" else SHOPEE_SITE_HOURS)
         if not observed or observed > now + timedelta(minutes=5) or now - observed > max_age:
             continue
         link = _allowed_link(row["offer_link"], source)
         image = _image_url(row["image_url"])
         price = _price(row["price_min"])
+        before = _price(row.get("original_price"))
+        if before and price and Decimal(before) < Decimal(price) * Decimal("1.05"):
+            before = None
         canonical = str(row["canonical_key"])
         if not link or not image or not price or not canonical or canonical in seen:
             continue
@@ -83,6 +87,7 @@ def select_offers(rows: list[dict], now: datetime) -> list[dict]:
             "title": str(row["title"]).strip()[:180],
             "source": source,
             "price": price,
+            "original_price": before,
             "image": image,
             "url": link,
             "observed_at": observed.isoformat(),
@@ -144,8 +149,8 @@ def read_rows() -> list[dict]:
         with psycopg.connect(db_url) as conn:
             with conn.cursor() as cursor:
                 cursor.execute("""SELECT listing_key, source, canonical_key, title, image_url,
-                               offer_link, price_min, sales, last_seen, status FROM listings
-                               WHERE status LIKE 'candidata%' AND last_seen >= now() - interval '6 hours'
+                               offer_link, price_min, original_price, sales, last_seen, status FROM listings
+                               WHERE status LIKE 'candidata%' AND last_seen >= now() - interval '12 hours'
                                ORDER BY last_seen DESC LIMIT 500""")
                 names = [column.name for column in cursor.description]
                 return [dict(zip(names, row)) for row in cursor.fetchall()]
@@ -154,7 +159,7 @@ def read_rows() -> list[dict]:
     with sqlite3.connect(DATABASE) as conn:
         conn.row_factory = sqlite3.Row
         return [dict(row) for row in conn.execute("""SELECT listing_key, source, canonical_key,
-            title, image_url, offer_link, price_min, sales, last_seen, status FROM listings
+            title, image_url, offer_link, price_min, original_price, sales, last_seen, status FROM listings
             WHERE status LIKE 'candidata%' ORDER BY last_seen DESC LIMIT 500""")]
 
 

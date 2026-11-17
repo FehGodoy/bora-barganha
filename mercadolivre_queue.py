@@ -40,15 +40,17 @@ def ingest(db) -> tuple[int, int]:
             continue
         key = PREFIX + row["external_id"]
         price = str(row["price"])
+        old_price = row["original_price"] if "original_price" in row.keys() else None
+        before = str(old_price) if old_price and float(old_price) > float(price) else None
         db.execute("""INSERT INTO listings
           (listing_key,source,canonical_key,title,image_url,offer_link,product_link,price_min,price_max,
-           rating,sales,first_seen,last_seen,lowest_seen,status,hold_reason)
-          VALUES (?,?,?,?,?,?,?,?,?,NULL,NULL,?,?,?,'candidata',NULL)
+           rating,sales,first_seen,last_seen,lowest_seen,original_price,status,hold_reason)
+          VALUES (?,?,?,?,?,?,?,?,?,NULL,NULL,?,?,?,?,'candidata',NULL)
           ON CONFLICT(listing_key) DO UPDATE SET title=excluded.title,image_url=excluded.image_url,
           offer_link=excluded.offer_link,product_link=excluded.product_link,price_min=excluded.price_min,
-          price_max=excluded.price_max,last_seen=excluded.last_seen,status='candidata',hold_reason=NULL""",
+          price_max=excluded.price_max,last_seen=excluded.last_seen,original_price=excluded.original_price,status='candidata',hold_reason=NULL""",
           (key, "mercadolivre", normalized_title(row["title"]), row["title"], row["image_url"], row["affiliate_link"],
-           row["page_url"], price, price, row["captured_at"], row["captured_at"], price))
+           row["page_url"], price, price, row["captured_at"], row["captured_at"], price, before))
         db.execute("INSERT INTO price_history(listing_key,observed_at,price_min,price_max) VALUES(?,?,?,?)",
                    (key, row["captured_at"], price, price))
         db.execute("UPDATE capture_queue SET status='importada' WHERE id=?", (row["id"],))
