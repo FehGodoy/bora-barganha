@@ -28,7 +28,7 @@ def current_offer(db: sqlite3.Connection, listing_key: str) -> dict:
     if not app_id or not secret:
         raise RuntimeError("Credenciais Shopee ausentes")
     query = ("query { productOfferV2(itemId: " + item_id + ", limit: 5, page: 1) { nodes { "
-             "itemId shopId productName imageUrl priceMin priceMax ratingStar sales offerLink periodEndTime "
+             "itemId shopId productName productCatIds imageUrl priceMin priceMax ratingStar sales offerLink periodEndTime "
              "} } }")
     throttle(db)
     try:

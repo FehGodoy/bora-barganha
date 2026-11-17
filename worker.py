@@ -18,7 +18,8 @@ import traceback
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from collect_shopee import DB_PATH, fetch_offers, open_db, store_offers
+from collect_shopee import DB_PATH, fetch_offer_ids, fetch_offers, open_db, store_offers
+from collect_campaigns import refresh_campaigns
 from mercadolivre_queue import ingest as ingest_ml
 from prepare_offer import load_openai_env, prepare, select_candidate
 from publish_whatsapp import MAX_PER_DAY, MIN_GAP, ensure_tables, publish
@@ -37,10 +38,15 @@ KEYWORDS = [
     "agua micelar", "sabonete facial", "vitamina c facial", "acido hialuronico", "creme para olhos",
     "oleo capilar", "leave in", "creme de pentear", "hidratante corporal", "desodorante",
     "perfume masculino", "esponja de maquiagem", "pinceis de maquiagem", "secador de cabelo", "prancha de cabelo",
+    "protetor solar facial", "gel de limpeza facial", "lip oil", "blush cremoso", "delineador liquido",
+    "batom matte", "mascara de tratamento capilar", "shampoo anticaspa", "serum vitamina c",
+    "creme para pentear", "perfume floral", "body splash feminino", "hidratante para pele seca",
 ]
 COLLECT_EVERY = timedelta(minutes=50)
 MAX_PREPARE_ATTEMPTS = 3
 REFRESH_EXISTING_LIMIT = 8
+DISCOVERY_LIMIT = 6
+BEAUTY_CATEGORY_ID = 100630
 
 
 def now() -> datetime:
@@ -128,34 +134,58 @@ def next_keyword(db: sqlite3.Connection) -> str:
     return KEYWORDS[index]
 
 
-def collect(db: sqlite3.Connection, run: Run, keyword: str) -> None:
+def collect(db: sqlite3.Connection, run: Run, keyword: str) -> int:
     load_local_env(ROOT / ".env.local")
     app_id = os.environ.get("SHOPEE_APP_ID", "").strip()
     secret = os.environ.get("SHOPEE_APP_SECRET", "").strip()
     if not app_id or not secret:
         raise RuntimeError("Credenciais Shopee ausentes")
-    # A Shopee devolve "10000 System Error" de forma intermitente (recusa instantânea do lado deles,
-    # sem relação com campos ou palavra-chave). Tenta até 4 vezes, trocando o termo, com o intervalo de 31 s.
-    attempts = 4
-    for attempt in range(attempts):
-        try:
-            offers = fetch_offers(db, app_id, secret, keyword)
-            break
-        except RuntimeError as error:
-            if attempt < attempts - 1 and "10000" in str(error):
-                run.step("coleta", False, f"erro 10000 em '{keyword}', tentando outro termo")
-                keyword = next_keyword(db)
-                continue
+    try:
+        offers = fetch_offers(db, app_id, secret, keyword)
+    except RuntimeError as error:
+        if "10000" not in str(error):
             raise
+        run.step("coleta", False, f"busca completa falhou para '{keyword}'; consultando IDs")
+        ids = None
+        for attempt in range(3):
+            try:
+                ids = fetch_offer_ids(db, app_id, secret, keyword)
+                break
+            except RuntimeError as basic_error:
+                if "10000" not in str(basic_error) or attempt == 2:
+                    raise
+                run.step("descoberta", False, f"busca básica falhou para '{keyword}'; tentando outro termo")
+                keyword = next_keyword(db)
+        assert ids is not None
+        offers = []
+        checked = 0
+        for item in ids:
+            shop_id, item_id = str(item.get("shopId") or ""), str(item.get("itemId") or "")
+            title = str(item.get("productName") or "").lower()
+            if not shop_id.isdigit() or not item_id.isdigit() or any(word in title for word in
+                ("chaveiro", "berloque", "fantasia", "brinquedo", "miniatura")):
+                continue
+            try:
+                detail = current_offer(db, f"shopee:{shop_id}:{item_id}")
+                checked += 1
+                if BEAUTY_CATEGORY_ID in (detail.get("productCatIds") or []):
+                    offers.append(detail)
+            except (RuntimeError, ValueError, KeyError):
+                checked += 1
+            if checked >= DISCOVERY_LIMIT:
+                break
+        run.step("descoberta", bool(offers), f"'{keyword}': {len(offers)} produtos de beleza confirmados em {checked} consultas")
+    offers = [item for item in offers if BEAUTY_CATEGORY_ID in (item.get("productCatIds") or [])]
     candidates, held = store_offers(db, offers)
     run.step("coleta", True, f"'{keyword}': {len(offers)} anúncios, {candidates} candidatos, {held} retidos")
+    return candidates
 
 
-def refresh_existing(db: sqlite3.Connection, run: Run) -> int:
+def refresh_existing(db: sqlite3.Connection, run: Run, limit: int = REFRESH_EXISTING_LIMIT) -> int:
     """Revalida itens conhecidos quando a busca por palavra-chave falha na Shopee."""
     rows = db.execute("""SELECT * FROM listings WHERE listing_key LIKE 'shopee:%' AND status LIKE 'candidata%'
                          ORDER BY last_seen ASC, COALESCE(sales,0) DESC LIMIT ?""",
-                      (REFRESH_EXISTING_LIMIT,)).fetchall()
+                      (limit,)).fetchall()
     refreshed = 0
     for row in rows:
         try:
@@ -191,14 +221,23 @@ def run_cycle(send: bool, skip_collect: bool, collect_only: bool = False) -> int
             if not skip_collect:
                 keyword = next_keyword(db)
                 try:
-                    collect(db, run, keyword)
+                    collected = collect(db, run, keyword)
                     db.execute("INSERT INTO state(key,value) VALUES('worker_last_collect',?) "
                                "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (now().isoformat(),))
                     db.commit()
+                    if collected < 3:
+                        refresh_existing(db, run, limit=3)
                 except RuntimeError as error:
                     run.step("coleta", False, str(error))  # segue com candidatas já coletadas (<2h)
                     if "10000" in str(error):
                         refresh_existing(db, run)
+
+            try:
+                campaign_count = refresh_campaigns(db)
+                if campaign_count is not None:
+                    run.step("campanhas", True, f"{campaign_count} campanhas de beleza disponíveis")
+            except RuntimeError as error:
+                run.step("campanhas", False, str(error))
 
             try:
                 imported, held = ingest_ml(db)

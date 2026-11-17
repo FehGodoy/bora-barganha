@@ -48,7 +48,7 @@ class OffersApiTests(unittest.TestCase):
             "last_seen": now.isoformat(),
             "status": "candidata",
         }
-        with patch.dict(os.environ, {"SUPABASE_DB_URL": "placeholder"}), patch.object(offers_api, "read_rows", return_value=[row]):
+        with patch.dict(os.environ, {"SUPABASE_DB_URL": "placeholder"}), patch.object(offers_api, "read_rows", return_value=[row]), patch.object(offers_api, "read_campaigns", return_value={}):
             status, headers, body = self.request()
         self.assertEqual(status, 200)
         self.assertEqual(len(body["offers"]), 1)

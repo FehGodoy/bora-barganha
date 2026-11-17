@@ -1,10 +1,24 @@
 import unittest
 from datetime import datetime, timedelta, timezone
 
-from build_site import select_offers
+from build_site import select_campaigns, select_offers
 
 
 class SiteExportTests(unittest.TestCase):
+    def test_campaigns_require_safe_link_image_and_valid_period(self):
+        now = datetime(2026, 11, 16, 15, tzinfo=timezone.utc)
+        base = {"offerName": "- - Beauty", "offerType": 2, "categoryId": 100630,
+                "imageUrl": "https://cf.shopee.com.br/file/example",
+                "offerLink": "https://s.shopee.com.br/example",
+                "periodEndTime": int((now + timedelta(days=1)).timestamp())}
+        stored = {"updated_at": now.isoformat(), "campaigns": [base,
+                  {**base, "offerLink": "https://evil.example/campaign"},
+                  {**base, "periodEndTime": 1}]}
+        campaigns = select_campaigns(stored, now)
+        self.assertEqual(len(campaigns), 1)
+        self.assertEqual(campaigns[0]["title"], "Beleza na Shopee")
+        self.assertEqual(select_campaigns(stored, now + timedelta(hours=25)), [])
+
     def test_only_recent_valid_unique_offers_are_public(self):
         now = datetime(2026, 11, 16, 15, tzinfo=timezone.utc)
         base = {

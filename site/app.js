@@ -5,7 +5,10 @@ const emptyTitle = empty.querySelector('h3');
 const emptyMessage = empty.querySelector('p');
 const filters = [...document.querySelectorAll('.filter')];
 const sort = document.querySelector('#sort');
+const campaignGrid = document.querySelector('#campaign-grid');
+const campaignEmpty = document.querySelector('#campaign-empty');
 let offers = [];
+let campaigns = [];
 let activeSource = 'all';
 
 function relativeTime(iso) {
@@ -56,7 +59,47 @@ function card(offer) {
   return article;
 }
 
+function campaignCard(campaign) {
+  const article = document.createElement('article');
+  article.className = 'campaign-card';
+  const copy = document.createElement('div');
+  copy.className = 'campaign-copy';
+  const label = document.createElement('span');
+  label.className = 'campaign-label';
+  label.textContent = campaign.kind;
+  const title = document.createElement('h3');
+  title.textContent = campaign.title;
+  const link = document.createElement('a');
+  link.className = 'campaign-link';
+  link.href = campaign.url;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer sponsored';
+  link.textContent = 'Explorar especial ↗';
+  link.setAttribute('aria-label', `Explorar ${campaign.title} na Shopee`);
+  const imageBox = document.createElement('div');
+  imageBox.className = 'campaign-image';
+  const image = document.createElement('img');
+  image.src = campaign.image;
+  image.alt = '';
+  image.loading = 'lazy';
+  image.referrerPolicy = 'no-referrer';
+  copy.append(label, title, link);
+  imageBox.append(image);
+  article.append(copy, imageBox);
+  return article;
+}
+
 function render() {
+  campaignGrid.replaceChildren(...campaigns.map(campaignCard));
+  campaignEmpty.hidden = campaigns.length > 0;
+  const sources = new Set(offers.map(offer => offer.source));
+  if (activeSource !== 'all' && !sources.has(activeSource)) activeSource = 'all';
+  filters.forEach(button => {
+    button.hidden = button.dataset.source !== 'all' && !sources.has(button.dataset.source);
+    const selected = button.dataset.source === activeSource;
+    button.classList.toggle('active', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
   const selected = offers.filter(offer => activeSource === 'all' || offer.source === activeSource);
   const ordered = [...selected].sort((a,b) => sort.value === 'low' ? Number(a.price)-Number(b.price) : sort.value === 'high' ? Number(b.price)-Number(a.price) : new Date(b.observed_at)-new Date(a.observed_at));
   grid.replaceChildren(...ordered.map(card));
@@ -70,6 +113,10 @@ async function loadOffers() {
     if (response.status === 404) response = await fetch(`offers.json?t=${Date.now()}`, {cache:'no-store'});
     if (!response.ok) throw new Error('Falha ao carregar ofertas');
     const data = await response.json();
+    campaigns = (Array.isArray(data.campaigns) ? data.campaigns : []).filter(campaign => {
+      const age = Date.now() - new Date(campaign.observed_at).getTime();
+      return age >= -5 * 60 * 1000 && age <= 24 * 60 * 60 * 1000;
+    });
     offers = (Array.isArray(data.offers) ? data.offers : []).filter(offer => {
       const age = Date.now() - new Date(offer.observed_at).getTime();
       const maxAge = offer.source === 'mercadolivre' ? 6 : 2;
@@ -80,6 +127,7 @@ async function loadOffers() {
     updated.textContent = `Seleção atualizada ${relativeTime(data.updated_at).toLowerCase().replace('atualizada ', '')}`;
   } catch {
     offers = [];
+    campaigns = [];
     updated.textContent = 'Não foi possível atualizar agora';
     emptyTitle.textContent = 'Não conseguimos carregar as ofertas.';
     emptyMessage.textContent = 'Tente atualizar novamente em alguns instantes.';

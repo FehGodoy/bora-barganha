@@ -65,6 +65,8 @@ def select_offers(rows: list[dict], now: datetime) -> list[dict]:
         source = str(row["source"])
         if source not in {"shopee", "mercadolivre"} or not str(row["status"]).startswith("candidata"):
             continue
+        if source == "shopee" and any(word in str(row["title"]).lower() for word in ("chaveiro", "berloque")):
+            continue
         observed = _timestamp(row["last_seen"])
         max_age = timedelta(hours=6 if source == "mercadolivre" else 2)
         if not observed or observed > now + timedelta(minutes=5) or now - observed > max_age:
@@ -88,6 +90,50 @@ def select_offers(rows: list[dict], now: datetime) -> list[dict]:
         })
     offers.sort(key=lambda offer: (offer["sales"], offer["observed_at"]), reverse=True)
     return [{k: v for k, v in offer.items() if k != "sales"} for offer in offers[:60]]
+
+
+def select_campaigns(stored: dict, now: datetime) -> list[dict]:
+    updated = _timestamp(stored.get("updated_at"))
+    if not updated or updated > now + timedelta(minutes=5) or now - updated > timedelta(hours=24):
+        return []
+    selected = []
+    seen = set()
+    for row in stored.get("campaigns", []):
+        link = _allowed_link(row.get("offerLink"), "shopee")
+        image = _image_url(row.get("imageUrl"))
+        name = str(row.get("offerName") or "").strip()
+        try:
+            end = int(row.get("periodEndTime") or 0)
+        except (ValueError, TypeError):
+            continue
+        if not name or not link or not image or link in seen or (end and end < now.timestamp()):
+            continue
+        seen.add(link)
+        category = row.get("categoryId") == 100630 and str(row.get("offerType")) == "2"
+        selected.append({"title": "Beleza na Shopee" if category else name,
+                         "kind": "Seleção de beleza" if category else "Campanha",
+                         "image": image, "url": link, "observed_at": updated.isoformat()})
+    return selected[:8]
+
+
+def read_campaigns() -> dict:
+    db_url = os.environ.get("SUPABASE_DB_URL", "").strip()
+    if db_url:
+        import psycopg
+
+        with psycopg.connect(db_url) as conn:
+            row = conn.execute("SELECT value FROM state WHERE key='shopee_beauty_campaigns'").fetchone()
+    elif DATABASE.exists():
+        with sqlite3.connect(DATABASE) as conn:
+            row = conn.execute("SELECT value FROM state WHERE key='shopee_beauty_campaigns'").fetchone()
+    else:
+        row = None
+    if not row:
+        return {}
+    try:
+        return json.loads(row[0])
+    except (ValueError, TypeError):
+        return {}
 
 
 def read_rows() -> list[dict]:
@@ -121,7 +167,8 @@ def main() -> None:
         shutil.copyfile(SITE / filename, DIST / filename)
     now = datetime.now(timezone.utc)
     offers = select_offers([] if args.empty else read_rows(), now)
-    payload = {"updated_at": now.isoformat(), "offers": offers}
+    payload = {"updated_at": now.isoformat(), "offers": offers,
+               "campaigns": [] if args.empty else select_campaigns(read_campaigns(), now)}
     temporary = DIST / "offers.json.tmp"
     temporary.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     temporary.replace(DIST / "offers.json")

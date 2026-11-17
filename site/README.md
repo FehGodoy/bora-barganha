@@ -1,6 +1,8 @@
 # Vitrine Bora Barganha na Vercel
 
-A página é HTML/CSS/JS estático. Não precisa de Next.js. A função `api/offers.py` lê ofertas recentes no Supabase pelo `SUPABASE_DB_URL` configurado na Vercel e devolve apenas os campos públicos. A resposta fica em cache por até cinco minutos na CDN. O navegador busca novos dados a cada cinco minutos e esconde ofertas vencidas.
+A página é HTML/CSS/JS estático. Não precisa de Next.js. Ela tem duas vitrines: **Especiais da Shopee** (campanhas e seleções de beleza, sem preço de produto) e **Nossos achados** (produtos com preço revalidado). A função `api/offers.py` lê ambos no Supabase pelo `SUPABASE_DB_URL` configurado na Vercel e devolve apenas os campos públicos. A resposta fica em cache por até cinco minutos na CDN. O navegador busca novos dados a cada cinco minutos e esconde ofertas vencidas.
+
+O worker consulta `shopeeOfferV2` para campanhas e as guarda em `state`, sem criar tabela pública. Para os achados, percorre as palavras-chave de beleza em `worker.py`. Se a busca completa `productOfferV2` retornar 10000, tenta uma busca básica por IDs com outras palavras e consulta os detalhes de cada `itemId`. Nesse caminho, só guarda itens cuja categoria principal confirmada pela Shopee é Beleza (`100630`). Quando a descoberta falha, revalida produtos conhecidos.
 
 ## Prévia local da página
 

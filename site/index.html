@@ -19,7 +19,7 @@
     <a class="brand" href="#inicio" aria-label="Bora Barganha, início">
       <span class="brand-icon" aria-hidden="true">✳</span><span>BORA<br><strong>BARGANHA</strong></span>
     </a>
-    <nav aria-label="Navegação principal"><a href="#ofertas">Ofertas</a><a href="#como-funciona">Como funciona</a></nav>
+    <nav aria-label="Navegação principal"><a href="#especiais">Especiais</a><a href="#ofertas">Achados</a><a href="#como-funciona">Como funciona</a></nav>
     <a class="header-cta" href="#ofertas">Ver achadinhos <span aria-hidden="true">↗</span></a>
   </header>
 
@@ -43,8 +43,14 @@
 
     <section class="ticker" aria-label="Categorias de beleza"><div>SKINCARE <span>✳</span> CABELO <span>✳</span> MAQUIAGEM <span>✳</span> PERFUMARIA <span>✳</span> AUTOCUIDADO <span>✳</span> SKINCARE <span>✳</span> CABELO <span>✳</span> MAQUIAGEM <span>✳</span></div></section>
 
+    <section class="campaigns shell" id="especiais" aria-labelledby="campaigns-title">
+      <div class="campaigns-heading"><div><div class="eyebrow coral">NO RADAR DA TEMPORADA</div><h2 id="campaigns-title">Especiais da Shopee<span class="period">.</span></h2><p>Campanhas e seleções de beleza para explorar. Confira as condições na loja.</p></div><span class="campaigns-mark" aria-hidden="true">✳</span></div>
+      <div id="campaign-grid" class="campaign-grid" aria-live="polite"></div>
+      <p id="campaign-empty" class="campaign-empty" hidden>Estamos procurando novos especiais de beleza. Enquanto isso, veja nossos achados abaixo.</p>
+    </section>
+
     <section class="offers shell" id="ofertas" aria-labelledby="offers-title">
-      <div class="section-heading"><div><div class="eyebrow coral">GARIMPO DO DIA</div><h2 id="offers-title">Ofertas em destaque<span class="period">.</span></h2><p>Uma seleção que muda ao longo do dia, direto das lojas parceiras.</p></div><div class="updated" id="updated" aria-live="polite">Carregando ofertas…</div></div>
+      <div class="section-heading"><div><div class="eyebrow coral">GARIMPO DO DIA</div><h2 id="offers-title">Nossos achados<span class="period">.</span></h2><p>Produtos de beleza com preço e link conferidos ao longo do dia.</p></div><div class="updated" id="updated" aria-live="polite">Carregando ofertas…</div></div>
       <div class="toolbar">
         <div class="filters" role="group" aria-label="Filtrar por loja">
           <button class="filter active" data-source="all" aria-pressed="true">Todas <span id="count-all"></span></button>
@@ -57,7 +63,7 @@
       <div id="empty" class="empty" hidden><div class="empty-mark">✳</div><h3>Nenhum achadinho fresquinho por aqui.</h3><p>Estamos atualizando a seleção. Volte em alguns minutos para ver as próximas ofertas.</p><button id="retry" class="button dark" type="button">Atualizar agora ↗</button></div>
     </section>
 
-    <section class="how shell" id="como-funciona" aria-labelledby="how-title"><div><div class="eyebrow coral">DO GARIMPO AO CLIQUE</div><h2 id="how-title">Beleza boa é beleza <em>bem encontrada.</em></h2></div><div class="how-steps"><article><span>01 /</span><h3>A gente garimpa</h3><p>Buscamos ofertas de beleza na Shopee e no Mercado Livre.</p></article><article><span>02 /</span><h3>Você descobre</h3><p>Mostramos as ofertas recentes com preço, imagem e link da loja.</p></article><article><span>03 /</span><h3>Compra na loja</h3><p>Ao clicar, você finaliza a compra no site da loja parceira.</p></article></div></section>
+    <section class="how shell" id="como-funciona" aria-labelledby="how-title"><div><div class="eyebrow coral">DO GARIMPO AO CLIQUE</div><h2 id="how-title">Beleza boa é beleza <em>bem encontrada.</em></h2></div><div class="how-steps"><article><span>01 /</span><h3>A gente garimpa</h3><p>Buscamos produtos de beleza e especiais da Shopee ao longo do dia.</p></article><article><span>02 /</span><h3>Você descobre</h3><p>Mostramos os achados recentes com preço e os especiais disponíveis.</p></article><article><span>03 /</span><h3>Compra na loja</h3><p>Ao clicar, você finaliza a compra no site da loja parceira.</p></article></div></section>
   </main>
   <footer class="footer"><div class="shell footer-inner"><div class="footer-brand">BORA<br><strong>BARGANHA</strong><span>✳</span></div><div><p>Seu cantinho de achadinhos de beleza.</p><small>Alguns links são de afiliados. Podemos receber comissão pela compra, sem custo extra para você. Confira preço e condições na loja antes de comprar.</small></div><a href="#inicio">Voltar ao topo ↑</a></div></footer>
 </body>

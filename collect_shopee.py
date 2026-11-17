@@ -24,7 +24,7 @@ WAIT_SECONDS = 31
 QUERY = """query {
   productOfferV2(keyword: %s, sortType: 2, limit: 30, page: 1) {
     nodes {
-      itemId shopId productName imageUrl priceMin priceMax ratingStar sales
+      itemId shopId productName productCatIds imageUrl priceMin priceMax ratingStar sales
       priceDiscountRate commissionRate productLink offerLink periodEndTime
     }
     pageInfo { page limit hasNextPage }
@@ -119,7 +119,28 @@ def fetch_offers(db: sqlite3.Connection, app_id: str, secret: str, keyword: str)
     return (body.get("data", {}).get("productOfferV2") or {}).get("nodes") or []
 
 
+def fetch_offer_ids(db: sqlite3.Connection, app_id: str, secret: str, keyword: str) -> list[dict]:
+    """Busca apenas identificadores; detalhes são consultados por itemId depois."""
+    throttle(db)
+    query = ("query { productOfferV2(keyword: " + json.dumps(keyword, ensure_ascii=True) +
+             ", limit: 10, page: 1) { nodes { itemId shopId productName } } }")
+    try:
+        with urlopen(signed_request(app_id, secret, query), timeout=30) as response:
+            body = json.load(response)
+    except HTTPError as error:
+        raise RuntimeError(f"Busca básica Shopee respondeu HTTP {error.code}") from None
+    except (URLError, TimeoutError):
+        raise RuntimeError("Falha de rede na busca básica Shopee") from None
+    if body.get("errors"):
+        codes = [str(error.get("extensions", {}).get("code", "?")) for error in body["errors"]]
+        raise RuntimeError("Busca básica Shopee falhou: " + ", ".join(codes))
+    return (body.get("data", {}).get("productOfferV2") or {}).get("nodes") or []
+
+
 def evaluate(item: dict, now: int) -> tuple[str, str | None]:
+    title = str(item.get("productName") or "").lower()
+    if any(word in title for word in ("chaveiro", "berloque")):
+        return "retida", "acessório fora do nicho"
     low, high = amount(item.get("priceMin")), amount(item.get("priceMax"))
     if not low or not high:
         return "retida", "preço ausente"

@@ -10,7 +10,7 @@ from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from build_site import read_rows, select_offers  # noqa: E402
+from build_site import read_campaigns, read_rows, select_campaigns, select_offers  # noqa: E402
 
 
 class handler(BaseHTTPRequestHandler):
@@ -20,7 +20,8 @@ class handler(BaseHTTPRequestHandler):
             return
         try:
             now = datetime.now(timezone.utc)
-            payload = {"updated_at": now.isoformat(), "offers": select_offers(read_rows(), now)}
+            payload = {"updated_at": now.isoformat(), "offers": select_offers(read_rows(), now),
+                       "campaigns": select_campaigns(read_campaigns(), now)}
         except Exception:
             self._respond(503, {"error": "Ofertas indisponíveis"}, "no-store")
             return
