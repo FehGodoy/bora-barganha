@@ -165,6 +165,7 @@ def main() -> None:
     DIST.mkdir(parents=True, exist_ok=True)
     for filename in ("index.html", "styles.css", "app.js", "favicon.svg"):
         shutil.copyfile(SITE / filename, DIST / filename)
+    shutil.copytree(SITE / "assets", DIST / "assets", dirs_exist_ok=True)
     now = datetime.now(timezone.utc)
     offers = select_offers([] if args.empty else read_rows(), now)
     payload = {"updated_at": now.isoformat(), "offers": offers,
